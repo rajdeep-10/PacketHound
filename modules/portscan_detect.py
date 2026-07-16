@@ -11,15 +11,12 @@ class PortScanDetector:
         self.threshold = threshold
         self.window_seconds = window_seconds
 
-        # cooldown_seconds: after alerting on an IP, how long we stay
-        # quiet about it before allowing a fresh alert. This is what
-        # stops one scan from generating 6 duplicate alerts.
         self.cooldown_seconds = cooldown_seconds
 
         self.tracker = defaultdict(lambda: {
             "ports": set(),
             "first_seen": None,
-            "last_alerted": None     # NEW — tracks when we last alerted this IP
+            "last_alerted": None
         })
 
         self.alerts = []
@@ -36,6 +33,7 @@ class PortScanDetector:
             return
 
         src_ip = ip_layer.src
+        dst_ip = ip_layer.dst  # <-- ADDED: Capture target IP
         dst_port = tcp_layer.dport
         now = time.time()
 
@@ -51,28 +49,24 @@ class PortScanDetector:
             entry["ports"].add(dst_port)
 
             if len(entry["ports"]) >= self.threshold:
-                # COOLDOWN CHECK — only alert if we've never alerted
-                # this IP before, OR the cooldown period has passed
                 already_cooling_down = (
                     entry["last_alerted"] is not None and
                     now - entry["last_alerted"] < self.cooldown_seconds
                 )
 
                 if not already_cooling_down:
-                    self.raise_alert(src_ip, entry["ports"], now)
+                    self.raise_alert(src_ip, dst_ip, entry["ports"], now) # <-- ADDED dst_ip
                     entry["last_alerted"] = now
 
-                # We still reset the port counter so we're tracking
-                # fresh activity, but we DON'T alert again until
-                # cooldown expires — this is the key change
                 entry["ports"] = set()
                 entry["first_seen"] = now
 
-    def raise_alert(self, src_ip, ports, timestamp):
+    def raise_alert(self, src_ip, target_ip, ports, timestamp): # <-- ADDED target_ip
         alert = {
             "type": "PORT_SCAN",
             "severity": "HIGH",
             "source_ip": src_ip,
+            "target_ip": target_ip,  # <-- ADDED target_ip
             "port_count": len(ports),
             "ports_sample": sorted(list(ports))[:10],
             "timestamp": timestamp,
@@ -84,6 +78,7 @@ class PortScanDetector:
         print(f"{Fore.RED}[ALERT] PORT SCAN DETECTED")
         print(f"{Fore.RED}{'='*60}")
         print(f"{Fore.YELLOW}  Source IP:    {src_ip}")
+        print(f"{Fore.YELLOW}  Target IP:    {target_ip}") # <-- ADDED
         print(f"{Fore.YELLOW}  Ports probed: {len(ports)} unique ports in {self.window_seconds}s window")
         print(f"{Fore.YELLOW}  Sample ports: {alert['ports_sample']}")
         print(f"{Fore.YELLOW}  Time:         {alert['readable_time']}")

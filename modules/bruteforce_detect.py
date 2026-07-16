@@ -40,6 +40,7 @@ class BruteForceDetector:
             return
 
         src_ip = ip_layer.src
+        dst_ip = ip_layer.dst  # <-- ADDED: Capture target IP
         key = (src_ip, dst_port)
         now = time.time()
 
@@ -61,19 +62,20 @@ class BruteForceDetector:
                 )
 
                 if not already_cooling_down:
-                    self.raise_alert(src_ip, dst_port, entry["count"], now)
+                    self.raise_alert(src_ip, dst_ip, dst_port, entry["count"], now) # <-- ADDED dst_ip
                     entry["last_alerted"] = now
 
                 entry["count"] = 0
                 entry["first_seen"] = now
 
-    def raise_alert(self, src_ip, port, attempt_count, timestamp):
+    def raise_alert(self, src_ip, target_ip, port, attempt_count, timestamp): # <-- ADDED target_ip
         service = self.MONITORED_PORTS.get(port, "Unknown")
 
         alert = {
             "type": "BRUTE_FORCE",
             "severity": "HIGH",
             "source_ip": src_ip,
+            "target_ip": target_ip,  # <-- ADDED target_ip
             "target_port": port,
             "target_service": service,
             "attempt_count": attempt_count,
@@ -86,6 +88,7 @@ class BruteForceDetector:
         print(f"{Fore.RED}[ALERT] POSSIBLE BRUTE-FORCE ATTACK DETECTED")
         print(f"{Fore.RED}{'='*60}")
         print(f"{Fore.YELLOW}  Source IP:     {src_ip}")
+        print(f"{Fore.YELLOW}  Target IP:     {target_ip}") # <-- ADDED
         print(f"{Fore.YELLOW}  Target service: {service} (port {port})")
         print(f"{Fore.YELLOW}  Attempts:      {attempt_count} connections in {self.window_seconds}s")
         print(f"{Fore.YELLOW}  Time:          {alert['readable_time']}")

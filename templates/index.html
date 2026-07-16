@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PacketHound | Security Monitor</title>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --panel: #ffffff;
+            --text: #1a1d21;
+            --muted: #6b7785;
+            --border: #d1d9e0;
+            --accent: #0073e6;
+            --critical: #d9342b;
+            --high: #ff8c00;
+            --info: #0073e6;
+            --green: #28a745;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--panel);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 12px; height: 12px;
+            background-color: var(--accent);
+            border-radius: 2px;
+        }
+
+        .header-meta {
+            font-size: 13px;
+            color: var(--muted);
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .status-pill {
+            background-color: #e6f4ff;
+            color: var(--accent);
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+            border: 1px solid #b3d9ff;
+        }
+
+        /* Main Layout */
+        .container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background-color: var(--panel);
+            border-right: 1px solid var(--border);
+            padding: 24px 16px;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+
+        .detector-card {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .detector-status {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background-color: var(--green);
+        }
+
+        /* Feed Area */
+        .main-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        /* Stats Bubbles */
+        .stats-container {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background-color: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+
+        .stat-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .stat-circle.total { background-color: #ffebee; color: var(--critical); border: 2px solid var(--critical); }
+        .stat-circle.port { background-color: #f0f4f8; color: var(--text); border: 2px solid var(--border); }
+        .stat-circle.arp { background-color: #f0f4f8; color: var(--text); border: 2px solid var(--border); }
+        .stat-circle.brute { background-color: #f0f4f8; color: var(--text); border: 2px solid var(--border); }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        /* Data Table */
+        .table-container {
+            background-color: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background-color: #f9fafb;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--muted);
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: #f9fafb; }
+
+        .sev-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .sev-high { background-color: #ffebee; color: var(--critical); }
+        .sev-medium { background-color: #fff3e0; color: var(--high); }
+        .sev-info { background-color: #e6f4ff; color: var(--accent); }
+
+        .empty-state {
+            padding: 40px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .ip-address {
+            font-family: monospace;
+            font-weight: 600;
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <div class="brand-icon"></div>
+            PacketHound
+        </div>
+        <div class="header-meta">
+            <span>Intrusion Detection System</span>
+            <div class="status-pill">● MONITORING</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="sidebar-title">Sensors</div>
+            <div class="detector-card">
+                Port Scan
+                <div class="detector-status" id="status-port" style="background-color: var(--green);"></div>
+            </div>
+            <div class="detector-card">
+                ARP Spoof
+                <div class="detector-status" id="status-arp" style="background-color: var(--green);"></div>
+            </div>
+            <div class="detector-card">
+                Brute Force
+                <div class="detector-status" id="status-brute" style="background-color: var(--green);"></div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Stats Bubbles -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-circle total" id="total-count">0</div>
+                    <div class="stat-label">Total Alerts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-circle port" id="port-count">0</div>
+                    <div class="stat-label">Port Scan</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-circle arp" id="arp-count">0</div>
+                    <div class="stat-label">ARP Spoof</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-circle brute" id="brute-count">0</div>
+                    <div class="stat-label">Brute Force</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">Time</th>
+                            <th style="width: 140px;">Attacker IP</th>
+                            <th style="width: 140px;">Target IP</th>
+                            <th style="width: 120px;">Detector</th>
+                            <th style="width: 100px;">Severity</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alert-body">
+                        <tr><td colspan="6"><div class="empty-state">Waiting for traffic...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function pollAlerts() {
+            try {
+                const res = await fetch('/api/alerts');
+                const alerts = await res.json();
+                
+                const tbody = document.getElementById('alert-body');
+                tbody.innerHTML = '';
+
+                // Reset sensor lights to green
+                document.getElementById('status-port').style.backgroundColor = '#28a745';
+                document.getElementById('status-arp').style.backgroundColor = '#28a745';
+                document.getElementById('status-brute').style.backgroundColor = '#28a745';
+
+                // Update top counters
+                document.getElementById('total-count').textContent = alerts.length;
+                let portCount = 0, arpCount = 0, bruteCount = 0;
+
+                if(alerts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No threats detected. Monitoring network traffic...</div></td></tr>';
+                } else {
+                    alerts.forEach(alert => {
+                        const tr = document.createElement('tr');
+                        
+                        let detector = alert.type || alert.detector || 'Unknown';
+                        let time = alert.readable_time || (alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString());
+                        
+                        // Extract IPs
+                        let attackerIp = alert.source_ip || '-';
+                        let targetIp = alert.target_ip || '-';
+                        
+                        // Build custom description based on alert type
+                        let message = '';
+                        if (alert.type === 'PORT_SCAN') {
+                            message = `Port scan detected (${alert.port_count} ports scanned). Sample: ${alert.ports_sample.join(', ')}`;
+                        } else if (alert.type === 'BRUTE_FORCE') {
+                            message = `Brute force on ${alert.target_service} (Port ${alert.target_port}). ${alert.attempt_count} attempts in ${alert.window_seconds}s.`;
+                        } else if (alert.type === 'ARP_SPOOF') {
+                            message = `MAC address changed from ${alert.trusted_mac} to ${alert.suspicious_mac}.`;
+                            // ARP doesn't have an attacker IP, so we show the suspicious MAC instead
+                            attackerIp = alert.suspicious_mac; 
+                        } else {
+                            message = alert.message || alert.details || JSON.stringify(alert);
+                        }
+                        
+                        // Default severity and formatting
+                        let severityClass = 'sev-info';
+                        let severityText = alert.severity || 'INFO';
+                        
+                        let detLower = detector.toLowerCase();
+                        if(detLower.includes('arp')) {
+                            arpCount++;
+                            document.getElementById('status-arp').style.backgroundColor = '#d9342b';
+                        } else if(detLower.includes('brute')) {
+                            bruteCount++;
+                            document.getElementById('status-brute').style.backgroundColor = '#d9342b';
+                        } else if (detLower.includes('port')) {
+                            portCount++;
+                            document.getElementById('status-port').style.backgroundColor = '#ff8c00';
+                        }
+
+                        // Set severity color
+                        if (severityText.includes('HIGH') || severityText.includes('CRITICAL')) { 
+                            severityClass = 'sev-high'; 
+                        } else if (severityText.includes('MEDIUM')) { 
+                            severityClass = 'sev-medium'; 
+                        }
+
+                        tr.innerHTML = `
+                            <td style="font-family: monospace; color: var(--muted);">${time}</td>
+                            <td class="ip-address">${attackerIp}</td>
+                            <td class="ip-address" style="color: var(--text);">${targetIp}</td>
+                            <td><strong>${detector.replace('_', ' ')}</strong></td>
+                            <td><span class="sev-tag ${severityClass}">${severityText}</span></td>
+                            <td>${message}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                // Update individual stats
+                document.getElementById('port-count').textContent = portCount;
+                document.getElementById('arp-count').textContent = arpCount;
+                document.getElementById('brute-count').textContent = bruteCount;
+
+            } catch (e) {
+                console.error("Polling error:", e);
+            }
+        }
+
+        // Poll every 2 seconds
+        setInterval(pollAlerts, 2000);
+        pollAlerts();
+    </script>
+</body>
+</html>
