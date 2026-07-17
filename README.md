@@ -63,7 +63,16 @@ Live ARP replies broadcast during the attack were correctly matched against the 
 
 ### 3. Brute-Force Login — Hydra against Metasploitable2's FTP service
 
-Initial attempt targeted SSH but hit a client/server crypto mismatch (Metasploitable2's SSH only supports legacy MAC algorithms modern SSH clients reject by default). Pivoted the test to FTP — a real judgment call, not a workaround that weakens security posture just to force a pass.
+```
+[ALERT] POSSIBLE BRUTE-FORCE ATTACK DETECTED
+Source IP:      192.168.98.129
+Target service: FTP (port 21)
+Attempts:       8 connections in 15s
+Time:           2026-07-16 19:15:35
+(Further alerts for this IP/port suppressed for 30s)
+```
+
+Hydra's rapid FTP login attempts were correctly detected and flagged in a single clean alert — no duplicate flooding, confirming the same cooldown/suppression fix built for the port scan detector works correctly here too.
 
 ---
 
