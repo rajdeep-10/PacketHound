@@ -28,17 +28,18 @@ class ArpSpoofDetector:
         known_mac = self.ip_to_mac[claimed_ip]
 
         if known_mac != claimed_mac:
-            self.raise_alert(claimed_ip, known_mac, claimed_mac)
+            self.raise_alert(claimed_ip, known_mac, claimed_mac, time.time())
             self.ip_to_mac[claimed_ip] = claimed_mac
 
-    def raise_alert(self, ip, old_mac, new_mac):
+    def raise_alert(self, ip, old_mac, new_mac, timestamp):
         alert = {
             "type": "ARP_SPOOF",
             "severity": "CRITICAL",
             "target_ip": ip,
             "trusted_mac": old_mac,
             "suspicious_mac": new_mac,
-            "readable_time": time.strftime("%Y-%m-%d %H:%M:%S")
+            "timestamp": timestamp,
+            "readable_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp))
         }
         self.alerts.append(alert)
 
